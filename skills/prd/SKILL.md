@@ -12,51 +12,34 @@ Create detailed Product Requirements Documents that are clear, actionable, and s
 
 ## The Job
 
-1. Receive a feature description from the user
-2. Ask 3-5 essential clarifying questions (with lettered options)
-3. Generate a structured PRD based on answers
-4. Save to `tasks/prd-[feature-name].md`
+1. Read the input — either:
+   - A completed questions file from `/prd-questions` (e.g., `tasks/prd-questions-[feature].md`) with answers filled in
+   - OR a sufficiently detailed feature description that doesn't need further clarification
+2. Generate a structured PRD based on the provided context
+3. Save to `tasks/prd-[feature-name].md`
 
 **Important:** Do NOT start implementing. Just create the PRD.
 
 ---
 
-## Step 1: Clarifying Questions
+## Input
 
-Ask only critical questions where the initial prompt is ambiguous. Focus on:
+### Option A: Answered questions file (recommended)
 
-- **Problem/Goal:** What problem does this solve?
-- **Core Functionality:** What are the key actions?
-- **Scope/Boundaries:** What should it NOT do?
-- **Success Criteria:** How do we know it's done?
+Read the file at the path the user provides (e.g., `tasks/prd-questions-[feature].md`). It will contain:
+- The original feature request
+- Clarifying questions with the user's answers filled in
+- An additional context section
 
-### Format Questions Like This:
+Use all of this to generate a comprehensive PRD.
 
-```
-1. What is the primary goal of this feature?
-   A. Improve user onboarding experience
-   B. Increase user retention
-   C. Reduce support burden
-   D. Other: [please specify]
+### Option B: Detailed feature description
 
-2. Who is the target user?
-   A. New users only
-   B. Existing users only
-   C. All users
-   D. Admin users only
-
-3. What is the scope?
-   A. Minimal viable version
-   B. Full-featured implementation
-   C. Just the backend/API
-   D. Just the UI
-```
-
-This lets users respond with "1A, 2C, 3B" for quick iteration. Remember to indent the options.
+If the user provides a detailed enough description directly, generate the PRD from that. Use your judgment — if the description is too vague, tell the user to run `/prd-questions` first.
 
 ---
 
-## Step 2: PRD Structure
+## PRD Structure
 
 Generate the PRD with these sections:
 
@@ -86,7 +69,7 @@ Each story should be small enough to implement in one focused session.
 - [ ] **[UI stories only]** Verify in browser using dev-browser skill
 ```
 
-**Important:** 
+**Important:**
 - Acceptance criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
 - **For any story with UI changes:** Always include "Verify in browser using dev-browser skill" as acceptance criteria. This ensures visual verification of frontend work.
 
@@ -233,8 +216,7 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 Before saving the PRD:
 
-- [ ] Asked clarifying questions with lettered options
-- [ ] Incorporated user's answers
+- [ ] Used answers from questions file or detailed description as input
 - [ ] User stories are small and specific
 - [ ] Functional requirements are numbered and unambiguous
 - [ ] Non-goals section defines clear boundaries

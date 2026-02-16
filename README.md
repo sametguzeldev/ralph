@@ -66,10 +66,12 @@ Then install the skills:
 ```
 
 Available skills after installation:
-- `/prd` - Generate Product Requirements Documents
+- `/prd-questions` - Generate clarifying questions for a feature
+- `/prd` - Generate PRD from answered questions
 - `/ralph` - Convert PRDs to prd.json format
 
 Skills are automatically invoked when you ask Claude to:
+- "prd questions for", "clarifying questions for", "what questions for"
 - "create a prd", "write prd for", "plan this feature"
 - "convert this prd", "turn into ralph format", "create prd.json"
 
@@ -87,19 +89,37 @@ This enables automatic handoff when context fills up, allowing Ralph to handle l
 
 ## Workflow
 
-### 1. Create a PRD
+### 1. Generate clarifying questions
 
-Use the PRD skill to generate a detailed requirements document:
+Use the `/prd-questions` skill to generate questions about your feature:
 
 ```
-Load the prd skill and create a PRD for [your feature description]
+Load the prd-questions skill and generate questions for [your feature description]
 ```
 
-Answer the clarifying questions. The skill saves output to `tasks/prd-[feature-name].md`.
+This saves questions to `tasks/prd-questions-[feature-name].md`. Open the file and fill in your answers.
 
-### 2. Convert PRD to Ralph format
+If your answers raise new questions, re-run the skill pointing at the same file:
 
-Use the Ralph skill to convert the markdown PRD to JSON:
+```
+Load the prd-questions skill and follow up on tasks/prd-questions-[feature-name].md
+```
+
+It will read your answers, identify gaps, and append follow-up questions. Repeat until satisfied.
+
+### 2. Create a PRD
+
+Use the `/prd` skill to generate a PRD from your answered questions:
+
+```
+Load the prd skill and generate a PRD from tasks/prd-questions-[feature-name].md
+```
+
+The skill reads your answers and generates a structured PRD at `tasks/prd-[feature-name].md`.
+
+### 3. Convert PRD to Ralph format
+
+Use the `/ralph` skill to convert the markdown PRD to JSON:
 
 ```
 Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json
@@ -107,7 +127,7 @@ Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json
 
 This creates `prd.json` with user stories structured for autonomous execution.
 
-### 3. Run Ralph
+### 4. Run Ralph
 
 ```bash
 # Using Amp (default)
@@ -139,7 +159,8 @@ Ralph will:
 | `prd.json` | User stories with `passes` status (the task list) |
 | `prd.json.example` | Example PRD format for reference |
 | `progress.txt` | Append-only learnings for future iterations |
-| `skills/prd/` | Skill for generating PRDs (works with Amp and Claude Code) |
+| `skills/prd-questions/` | Skill for generating clarifying questions before writing a PRD |
+| `skills/prd/` | Skill for generating PRDs from answered questions |
 | `skills/ralph/` | Skill for converting PRDs to JSON (works with Amp and Claude Code) |
 | `.claude-plugin/` | Plugin manifest for Claude Code marketplace discovery |
 | `flowchart/` | Interactive visualization of how Ralph works |
