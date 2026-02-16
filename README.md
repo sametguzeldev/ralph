@@ -25,14 +25,16 @@ Copy the ralph files into your project:
 ```bash
 # From your project root
 mkdir -p scripts/ralph
+
+# For Amp:
 cp /path/to/ralph/ralph.sh scripts/ralph/
+cp /path/to/ralph/prompt.md scripts/ralph/prompt.md
 
-# Copy the prompt template for your AI tool of choice:
-cp /path/to/ralph/prompt.md scripts/ralph/prompt.md    # For Amp
-# OR
-cp /path/to/ralph/CLAUDE.md scripts/ralph/CLAUDE.md    # For Claude Code
+# For Claude Code:
+cp /path/to/ralph/ralph-cc.sh scripts/ralph/
+cp /path/to/ralph/CLAUDE.md scripts/ralph/CLAUDE.md
 
-chmod +x scripts/ralph/ralph.sh
+chmod +x scripts/ralph/ralph.sh scripts/ralph/ralph-cc.sh
 ```
 
 ### Option 2: Install skills globally (Amp)
@@ -47,6 +49,7 @@ cp -r skills/ralph ~/.config/amp/skills/
 
 For Claude Code (manual)
 ```bash
+cp -r skills/prd-questions ~/.claude/skills/
 cp -r skills/prd ~/.claude/skills/
 cp -r skills/ralph ~/.claude/skills/
 ```
@@ -89,40 +92,36 @@ This enables automatic handoff when context fills up, allowing Ralph to handle l
 
 ## Workflow
 
+Each step can be run non-interactively with `claude -p` (add `--dangerously-skip-permissions` for fully autonomous operation), or interactively in a Claude Code session.
+
 ### 1. Generate clarifying questions
 
-Use the `/prd-questions` skill to generate questions about your feature:
-
-```
-Load the prd-questions skill and generate questions for [your feature description]
+```bash
+claude -p "Load the prd-questions skill and generate questions for [your feature description]" --dangerously-skip-permissions
 ```
 
 This saves questions to `tasks/prd-questions-[feature-name].md`. Open the file and fill in your answers.
 
-If your answers raise new questions, re-run the skill pointing at the same file:
+If your answers raise new questions, re-run pointing at the same file:
 
-```
-Load the prd-questions skill and follow up on tasks/prd-questions-[feature-name].md
+```bash
+claude -p "Load the prd-questions skill and follow up on tasks/prd-questions-[feature-name].md" --dangerously-skip-permissions
 ```
 
 It will read your answers, identify gaps, and append follow-up questions. Repeat until satisfied.
 
 ### 2. Create a PRD
 
-Use the `/prd` skill to generate a PRD from your answered questions:
-
-```
-Load the prd skill and generate a PRD from tasks/prd-questions-[feature-name].md
+```bash
+claude -p "Load the prd skill and generate a PRD from tasks/prd-questions-[feature-name].md" --dangerously-skip-permissions
 ```
 
 The skill reads your answers and generates a structured PRD at `tasks/prd-[feature-name].md`.
 
 ### 3. Convert PRD to Ralph format
 
-Use the `/ralph` skill to convert the markdown PRD to JSON:
-
-```
-Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json
+```bash
+claude -p "Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json" --dangerously-skip-permissions
 ```
 
 This creates `prd.json` with user stories structured for autonomous execution.
@@ -130,14 +129,17 @@ This creates `prd.json` with user stories structured for autonomous execution.
 ### 4. Run Ralph
 
 ```bash
-# Using Amp (default)
+# Using Claude Code (recommended)
+./scripts/ralph/ralph-cc.sh [max_iterations]
+
+# Using Amp
 ./scripts/ralph/ralph.sh [max_iterations]
 
-# Using Claude Code
+# Using Claude Code (legacy, pipes CLAUDE.md as stdin)
 ./scripts/ralph/ralph.sh --tool claude [max_iterations]
 ```
 
-Default is 10 iterations. Use `--tool amp` or `--tool claude` to select your AI coding tool.
+Default is 10 iterations.
 
 Ralph will:
 1. Create a feature branch (from PRD `branchName`)
@@ -153,7 +155,8 @@ Ralph will:
 
 | File | Purpose |
 |------|---------|
-| `ralph.sh` | The bash loop that spawns fresh AI instances (supports `--tool amp` or `--tool claude`) |
+| `ralph-cc.sh` | Claude Code agent loop using `claude -p` with proper skill/project integration |
+| `ralph.sh` | Legacy bash loop that supports both Amp (`--tool amp`) and Claude Code (`--tool claude`) |
 | `prompt.md` | Prompt template for Amp |
 | `CLAUDE.md` | Prompt template for Claude Code |
 | `prd.json` | User stories with `passes` status (the task list) |
