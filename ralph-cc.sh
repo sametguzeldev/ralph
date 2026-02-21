@@ -228,6 +228,10 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     PARALLEL_PIDS=()
     PARALLEL_TITLES=()
 
+    # Snapshot HEAD now — after all previous wave merges — so every worktree
+    # in this wave starts from exactly the same, up-to-date commit.
+    WAVE_BASE=$(git -C "$GIT_ROOT" rev-parse HEAD)
+
     # Launch all stories in parallel
     while IFS= read -r story; do
       STORY_ID=$(echo "$story" | jq -r '.id')
@@ -236,19 +240,24 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       STORY_AC=$(echo "$story" | jq -r '.acceptanceCriteria | join("; ")')
 
       WORKTREE_NAME="ralph-$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]')"
+      WORKTREE_DIR="$GIT_ROOT/.claude/worktrees/$WORKTREE_NAME"
       OUT_FILE="/tmp/ralph-${STORY_ID}.out"
 
       PROMPT="Parallel mode: implement story ${STORY_ID}: ${STORY_TITLE}.
 Description: ${STORY_DESC}
 Acceptance criteria: ${STORY_AC}"
 
+      # Create the worktree ourselves from WAVE_BASE so it is guaranteed to
+      # include all commits from previous waves (not just whatever claude
+      # --worktree resolves internally).
+      git -C "$GIT_ROOT" worktree add "$WORKTREE_DIR" -b "$WORKTREE_NAME" "$WAVE_BASE" 2>/dev/null
+
       mark_story_inprogress "$STORY_ID"
-      echo "  Launching ${STORY_ID}: ${STORY_TITLE} (worktree: ${WORKTREE_NAME})"
+      echo "  Launching ${STORY_ID}: ${STORY_TITLE} (worktree: ${WORKTREE_NAME}, base: ${WAVE_BASE:0:8})"
 
       (
-        cd "$GIT_ROOT"
-        claude --worktree "$WORKTREE_NAME" \
-          -p "$PROMPT" \
+        cd "$WORKTREE_DIR"
+        claude -p "$PROMPT" \
           --append-system-prompt "$SYSTEM_PROMPT" \
           --dangerously-skip-permissions \
           > "$OUT_FILE" 2>&1
