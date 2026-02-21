@@ -192,8 +192,9 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   else
     echo "  Mode: parallel (${WAVE_COUNT} concurrent worktrees)"
 
-    declare -A PIDS
-    declare -A STORY_IDS_MAP
+    PARALLEL_IDS=()
+    PARALLEL_PIDS=()
+    PARALLEL_TITLES=()
 
     # Launch all stories in parallel
     while IFS= read -r story; do
@@ -202,7 +203,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       STORY_DESC=$(echo "$story" | jq -r '.description')
       STORY_AC=$(echo "$story" | jq -r '.acceptanceCriteria | join("; ")')
 
-      WORKTREE_NAME="ralph-${STORY_ID,,}"
+      WORKTREE_NAME="ralph-$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]')"
       OUT_FILE="/tmp/ralph-${STORY_ID}.out"
 
       PROMPT="Parallel mode: implement story ${STORY_ID}: ${STORY_TITLE}.
@@ -220,8 +221,9 @@ Acceptance criteria: ${STORY_AC}"
           > "$OUT_FILE" 2>&1
       ) &
 
-      PIDS["$STORY_ID"]=$!
-      STORY_IDS_MAP["$STORY_ID"]="$STORY_TITLE"
+      PARALLEL_IDS+=("$STORY_ID")
+      PARALLEL_PIDS+=("$!")
+      PARALLEL_TITLES+=("$STORY_TITLE")
     done < <(echo "$WAVE_STORIES" | jq -c '.[]')
 
     echo "  Waiting for ${WAVE_COUNT} parallel agents..."
@@ -230,10 +232,11 @@ Acceptance criteria: ${STORY_AC}"
     MERGED_STORIES=()
     FAILED_STORIES=()
 
-    for STORY_ID in "${!PIDS[@]}"; do
-      PID="${PIDS[$STORY_ID]}"
-      STORY_TITLE="${STORY_IDS_MAP[$STORY_ID]}"
-      WORKTREE_NAME="ralph-${STORY_ID,,}"
+    for idx in "${!PARALLEL_IDS[@]}"; do
+      STORY_ID="${PARALLEL_IDS[$idx]}"
+      PID="${PARALLEL_PIDS[$idx]}"
+      STORY_TITLE="${PARALLEL_TITLES[$idx]}"
+      WORKTREE_NAME="ralph-$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]')"
       WORKTREE_DIR="$GIT_ROOT/.claude/worktrees/$WORKTREE_NAME"
       OUT_FILE="/tmp/ralph-${STORY_ID}.out"
 
@@ -276,8 +279,7 @@ Acceptance criteria: ${STORY_AC}"
       cleanup_worktree "$WORKTREE_NAME" "$BRANCH"
     done
 
-    unset PIDS
-    unset STORY_IDS_MAP
+    unset PARALLEL_IDS PARALLEL_PIDS PARALLEL_TITLES
 
     # Append combined progress entry
     if [ ${#MERGED_STORIES[@]} -gt 0 ]; then
