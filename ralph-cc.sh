@@ -43,12 +43,38 @@ get_stories_at_priority() {
   jq -c "[.userStories[] | select(.passes == false and .priority == $priority)]" "$PRD_FILE"
 }
 
-# Mark a story as passing in prd.json (in-place)
+# Mark a story as in-progress in prd.json (in-place)
+mark_story_inprogress() {
+  local story_id="$1"
+  local tmp
+  tmp=$(mktemp)
+  jq "(.userStories[] | select(.id == \"$story_id\") | .inProgress) |= true" "$PRD_FILE" > "$tmp"
+  mv "$tmp" "$PRD_FILE"
+}
+
+# Clear in-progress flag for a story
+clear_story_inprogress() {
+  local story_id="$1"
+  local tmp
+  tmp=$(mktemp)
+  jq "(.userStories[] | select(.id == \"$story_id\") | .inProgress) |= false" "$PRD_FILE" > "$tmp"
+  mv "$tmp" "$PRD_FILE"
+}
+
+# Reset all inProgress flags — used at startup to clear any stale state
+reset_all_inprogress() {
+  local tmp
+  tmp=$(mktemp)
+  jq '(.userStories[] | .inProgress) |= false' "$PRD_FILE" > "$tmp"
+  mv "$tmp" "$PRD_FILE"
+}
+
+# Mark a story as passing in prd.json (in-place), also clears inProgress
 mark_story_done() {
   local story_id="$1"
   local tmp
   tmp=$(mktemp)
-  jq "(.userStories[] | select(.id == \"$story_id\") | .passes) |= true" "$PRD_FILE" > "$tmp"
+  jq "(.userStories[] | select(.id == \"$story_id\")) |= (.passes = true | .inProgress = false)" "$PRD_FILE" > "$tmp"
   mv "$tmp" "$PRD_FILE"
 }
 
@@ -144,6 +170,7 @@ if [ ! -f "$PROGRESS_FILE" ]; then
 fi
 
 cleanup_stale_worktrees
+reset_all_inprogress
 
 echo "Starting Ralph (Claude Code) - Max iterations: $MAX_ITERATIONS"
 
@@ -175,9 +202,14 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   # -------------------------------------------------------------------------
   if [ "$WAVE_COUNT" -eq 1 ]; then
     echo "  Mode: sequential"
+    SEQ_ID=$(echo "$WAVE_STORIES" | jq -r '.[0].id')
+    mark_story_inprogress "$SEQ_ID"
+
     OUTPUT=$(claude -p "Read CLAUDE.md and begin the next Ralph iteration" \
       --append-system-prompt "$SYSTEM_PROMPT" \
       --dangerously-skip-permissions 2>&1 | tee /dev/stderr) || true
+
+    clear_story_inprogress "$SEQ_ID"
 
     if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
       echo ""
@@ -210,6 +242,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 Description: ${STORY_DESC}
 Acceptance criteria: ${STORY_AC}"
 
+      mark_story_inprogress "$STORY_ID"
       echo "  Launching ${STORY_ID}: ${STORY_TITLE} (worktree: ${WORKTREE_NAME})"
 
       (
@@ -250,6 +283,7 @@ Acceptance criteria: ${STORY_AC}"
       if ! echo "$OUTPUT" | grep -q "<story-done>${STORY_ID}</story-done>"; then
         echo "  ✗ ${STORY_ID}: no completion signal — skipping merge"
         FAILED_STORIES+=("$STORY_ID")
+        clear_story_inprogress "$STORY_ID"
         BRANCH=$(worktree_branch_for "$WORKTREE_DIR")
         cleanup_worktree "$WORKTREE_NAME" "$BRANCH"
         continue
@@ -260,6 +294,7 @@ Acceptance criteria: ${STORY_AC}"
       if [ -z "$BRANCH" ]; then
         echo "  ✗ ${STORY_ID}: could not determine worktree branch — skipping"
         FAILED_STORIES+=("$STORY_ID")
+        clear_story_inprogress "$STORY_ID"
         cleanup_worktree "$WORKTREE_NAME" ""
         continue
       fi
@@ -267,12 +302,13 @@ Acceptance criteria: ${STORY_AC}"
       # Attempt merge into current branch
       echo "  Merging ${STORY_ID} (branch: ${BRANCH})..."
       if git -C "$GIT_ROOT" merge --no-ff "$BRANCH" -m "merge: ${STORY_ID} - ${STORY_TITLE}" 2>/dev/null; then
-        mark_story_done "$STORY_ID"
+        mark_story_done "$STORY_ID"  # also clears inProgress
         MERGED_STORIES+=("$STORY_ID")
         echo "  ✓ ${STORY_ID} merged and marked done"
       else
         git -C "$GIT_ROOT" merge --abort 2>/dev/null || true
         echo "  ✗ ${STORY_ID}: merge conflict — will retry next iteration"
+        clear_story_inprogress "$STORY_ID"
         FAILED_STORIES+=("$STORY_ID")
       fi
 

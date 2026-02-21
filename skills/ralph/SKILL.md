@@ -35,6 +35,7 @@ Take a PRD (markdown file or text) and convert it to `scripts/ralph/prd.json` (r
       ],
       "priority": 1,
       "passes": false,
+      "inProgress": false,
       "notes": ""
     }
   ]
@@ -209,6 +210,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 1,
       "passes": false,
+      "inProgress": false,
       "notes": ""
     },
     {
@@ -223,6 +225,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 2,
       "passes": false,
+      "inProgress": false,
       "notes": ""
     },
     {
@@ -238,6 +241,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 2,
       "passes": false,
+      "inProgress": false,
       "notes": ""
     },
     {
@@ -252,6 +256,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 2,
       "passes": false,
+      "inProgress": false,
       "notes": ""
     }
   ]
