@@ -144,10 +144,11 @@ Default is 10 iterations.
 Ralph will:
 1. Create a feature branch (from PRD `branchName`)
 2. Pick the highest priority story where `passes: false`
-3. Implement that single story
-4. Run quality checks (typecheck, tests)
-5. Commit if checks pass
-6. Update `prd.json` to mark story as `passes: true`
+3. Mark it `inProgress: true` in `prd.json`
+4. Implement that single story
+5. Run quality checks (typecheck, tests)
+6. Commit if checks pass
+7. Update `prd.json` to mark story as `passes: true`, `inProgress: false`
 7. Append learnings to `progress.txt`
 8. Repeat until all stories pass or max iterations reached
 
@@ -159,7 +160,7 @@ Ralph will:
 | `ralph.sh` | Legacy bash loop that supports both Amp (`--tool amp`) and Claude Code (`--tool claude`) |
 | `prompt.md` | Prompt template for Amp |
 | `CLAUDE.md` | Prompt template for Claude Code |
-| `prd.json` | User stories with `passes` status (the task list) |
+| `prd.json` | User stories with `passes` and `inProgress` status (the task list) |
 | `prd.json.example` | Example PRD format for reference |
 | `progress.txt` | Append-only learnings for future iterations |
 | `skills/prd-questions/` | Skill for generating clarifying questions before writing a PRD |
@@ -254,8 +255,8 @@ If a parallel run was interrupted, any leftover worktrees are cleaned up automat
 Check current state:
 
 ```bash
-# See which stories are done
-cat prd.json | jq '.userStories[] | {id, title, passes}'
+# See story status (pending / in progress / done)
+cat prd.json | jq '.userStories[] | {id, title, passes, inProgress}'
 
 # See learnings from previous iterations
 cat progress.txt
