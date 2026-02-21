@@ -191,6 +191,23 @@ Each iteration spawns a **new AI instance** (Amp or Claude Code) with clean cont
 - `progress.txt` (learnings and context)
 - `prd.json` (which stories are done)
 
+### Parallel Execution
+
+Ralph automatically runs stories in **parallel** when they share the same `priority` number. Each story gets its own git worktree via `claude --worktree`, so their code changes never clobber each other.
+
+```
+priority 1 — schema migration                    ← runs alone first
+priority 2 — UI component A (independent)        ← these two run
+priority 2 — UI component B (independent)        ←   simultaneously
+priority 3 — dashboard view (depends on A + B)   ← runs alone after
+```
+
+After all worktrees in a wave finish, Ralph merges them back sequentially. If two stories edited the same file and a merge conflict occurs, the conflicting story is skipped and retried in the next iteration.
+
+The orchestrator (`ralph-cc.sh`) handles `prd.json` updates and `progress.txt` in parallel mode — agents only commit their code changes and output a `<story-done>US-XXX</story-done>` signal.
+
+**Rule:** Only assign the same priority to stories that edit completely different files. Parallel stories that touch the same file will conflict on merge.
+
 ### Small Tasks
 
 Each PRD item should be small enough to complete in one context window. If a task is too big, the LLM runs out of context before finishing and produces poor code.

@@ -78,6 +78,29 @@ Stories execute in priority order. Earlier stories must not depend on later ones
 1. UI component (depends on schema that does not exist yet)
 2. Schema change
 
+### Parallel Execution
+
+Ralph runs stories with the **same priority number** simultaneously in separate
+git worktrees (`claude --worktree`). This means a wave of same-priority stories
+finishes in the time it takes to complete the slowest one.
+
+**Set the same priority** for stories that are truly independent:
+- They touch different files
+- Neither depends on the other
+
+**Use different priorities** for stories that must sequence:
+
+```
+priority 1 — Add status column to database        (must land first)
+priority 2 — Show status badge on task cards      (independent of priority 2b)
+priority 2 — Add status filter dropdown           (independent of priority 2a)
+priority 3 — Dashboard summary using status data  (needs both priority 2 stories)
+```
+
+> **Important:** Only group stories at the same priority if they edit different
+> files. If two parallel stories modify the same file, merging will produce
+> conflicts and one story will be retried in the next iteration.
+
 ---
 
 ## Acceptance Criteria: Must Be Verifiable

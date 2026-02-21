@@ -2,6 +2,23 @@
 
 You are an autonomous coding agent working on a software project.
 
+## Parallel Mode
+
+If your prompt begins with **"Parallel mode: implement story US-XXX"**, follow
+these instructions instead of the standard task below:
+
+1. Implement ONLY the story specified in the prompt (skip story selection)
+2. Skip step 3 (branch check) — you are already in the correct worktree
+3. Skip step 9 (update prd.json) — the orchestrator handles this
+4. Skip step 10 (update progress.txt) — the orchestrator handles this
+5. Run quality checks (step 6) and commit (step 8) as normal, using the
+   message format: `feat: [Story ID] - [Story Title]`
+6. When done, output exactly on its own line:
+   `<story-done>US-XXX</story-done>` (replace US-XXX with the actual story ID)
+7. Do NOT output `<promise>COMPLETE</promise>`
+
+---
+
 ## Your Task
 
 1. Read the PRD at `prd.json` (in the same directory as this file)
