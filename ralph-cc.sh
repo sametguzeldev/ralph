@@ -81,6 +81,29 @@ cleanup_worktree() {
   fi
 }
 
+# Remove any ralph-* worktrees left behind by a previously interrupted run
+cleanup_stale_worktrees() {
+  local stale_paths
+  stale_paths=$(git -C "$GIT_ROOT" worktree list --porcelain \
+    | grep "^worktree " \
+    | awk '{print $2}' \
+    | grep "/.claude/worktrees/ralph-" || true)
+
+  [ -z "$stale_paths" ] && return
+
+  echo "Cleaning up stale worktrees from interrupted run..."
+  while IFS= read -r wt_path; do
+    local wt_name branch
+    wt_name=$(basename "$wt_path")
+    branch=$(worktree_branch_for "$wt_path")
+    git -C "$GIT_ROOT" worktree remove --force "$wt_path" 2>/dev/null || true
+    if [ -n "$branch" ]; then
+      git -C "$GIT_ROOT" branch -D "$branch" 2>/dev/null || true
+    fi
+    echo "  Removed stale worktree: $wt_name"
+  done <<< "$stale_paths"
+}
+
 # ---------------------------------------------------------------------------
 # Archive previous run if branch changed
 # ---------------------------------------------------------------------------
@@ -119,6 +142,8 @@ if [ ! -f "$PROGRESS_FILE" ]; then
   echo "Started: $(date)" >> "$PROGRESS_FILE"
   echo "---" >> "$PROGRESS_FILE"
 fi
+
+cleanup_stale_worktrees
 
 echo "Starting Ralph (Claude Code) - Max iterations: $MAX_ITERATIONS"
 

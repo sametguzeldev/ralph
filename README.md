@@ -249,6 +249,8 @@ When all stories have `passes: true`, Ralph outputs `<promise>COMPLETE</promise>
 
 ## Debugging
 
+If a parallel run was interrupted, any leftover worktrees are cleaned up automatically the next time `ralph-cc.sh` starts.
+
 Check current state:
 
 ```bash
