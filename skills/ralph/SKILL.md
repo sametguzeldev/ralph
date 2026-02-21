@@ -143,7 +143,14 @@ Frontend stories are NOT complete until visually verified. Ralph will use the de
 
 1. **Each user story becomes one JSON entry**
 2. **IDs**: Sequential (US-001, US-002, etc.)
-3. **Priority**: Based on dependency order, then document order
+3. **Priority**: Assign by dependency level — stories that share the same dependency
+   level get the **same number**; only increment when a story depends on something
+   at the current level. Stories with the same priority run in parallel, so only
+   group them together if they edit different files.
+   - Level 1: stories with no dependencies
+   - Level 2: stories that depend only on level-1 stories
+   - Level 3: stories that depend on any level-2 story
+   - …and so on
 4. **All stories**: `passes: false` and empty `notes`
 5. **branchName**: Derive from feature name, kebab-case, prefixed with `ralph/`
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
@@ -229,7 +236,7 @@ Add ability to mark tasks with different statuses.
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
-      "priority": 3,
+      "priority": 2,
       "passes": false,
       "notes": ""
     },
@@ -243,7 +250,7 @@ Add ability to mark tasks with different statuses.
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
-      "priority": 4,
+      "priority": 2,
       "passes": false,
       "notes": ""
     }
