@@ -172,6 +172,25 @@ fi
 cleanup_stale_worktrees
 reset_all_inprogress
 
+# Ensure we are on the feature branch specified in prd.json before any agents
+# run. Without this, parallel-mode worktrees (which skip the branch check)
+# would branch from whatever happens to be checked out.
+if [ -f "$PRD_FILE" ]; then
+  FEATURE_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
+  if [ -n "$FEATURE_BRANCH" ]; then
+    CURRENT_CHECKOUT=$(git -C "$GIT_ROOT" rev-parse --abbrev-ref HEAD)
+    if [ "$CURRENT_CHECKOUT" != "$FEATURE_BRANCH" ]; then
+      if git -C "$GIT_ROOT" show-ref --verify --quiet "refs/heads/$FEATURE_BRANCH"; then
+        git -C "$GIT_ROOT" checkout "$FEATURE_BRANCH"
+        echo "Switched to branch: $FEATURE_BRANCH"
+      else
+        git -C "$GIT_ROOT" checkout -b "$FEATURE_BRANCH"
+        echo "Created and switched to branch: $FEATURE_BRANCH"
+      fi
+    fi
+  fi
+fi
+
 echo "Starting Ralph (Claude Code) - Max iterations: $MAX_ITERATIONS"
 
 # ---------------------------------------------------------------------------
