@@ -224,9 +224,12 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     SEQ_ID=$(echo "$WAVE_STORIES" | jq -r '.[0].id')
     mark_story_inprogress "$SEQ_ID"
 
-    OUTPUT=$(claude -p "Read CLAUDE.md and begin the next Ralph iteration" \
+    SEQ_OUT=$(mktemp)
+    claude -p "Read CLAUDE.md and begin the next Ralph iteration" \
       --append-system-prompt "$SYSTEM_PROMPT" \
-      --dangerously-skip-permissions 2>&1 | tee /dev/stderr) || true
+      --dangerously-skip-permissions 2>&1 | tee "$SEQ_OUT" || true
+    OUTPUT=$(cat "$SEQ_OUT")
+    rm -f "$SEQ_OUT"
 
     clear_story_inprogress "$SEQ_ID"
 
