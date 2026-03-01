@@ -2,7 +2,7 @@
 
 ![Ralph](ralph.webp)
 
-Ralph is an autonomous AI agent loop that runs AI coding tools ([Amp](https://ampcode.com) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) repeatedly until all PRD items are complete. Each iteration is a fresh instance with clean context. Memory persists via git history, `progress.txt`, and `prd.json`.
+Ralph is an autonomous AI agent loop that runs AI coding tools ([Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenCode](https://opencode.ai), [Codex](https://github.com/openai/codex), or [Amp](https://ampcode.com)) repeatedly until all PRD items are complete. Each iteration is a fresh instance with clean context. Memory persists via git history, `progress.txt`, and `prd.json`.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
@@ -11,8 +11,10 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 ## Prerequisites
 
 - One of the following AI coding tools installed and authenticated:
-  - [Amp CLI](https://ampcode.com) (default)
   - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)
+  - [OpenCode](https://opencode.ai) (`npm i -g opencode-ai@latest`)
+  - [Codex](https://github.com/openai/codex) (`npm install -g @openai/codex`)
+  - [Amp CLI](https://ampcode.com)
 - `jq` installed (`brew install jq` on macOS)
 - A git repository for your project
 
@@ -26,15 +28,23 @@ Copy the ralph files into your project:
 # From your project root
 mkdir -p scripts/ralph
 
-# For Amp:
-cp /path/to/ralph/ralph.sh scripts/ralph/
-cp /path/to/ralph/prompt.md scripts/ralph/prompt.md
-
 # For Claude Code:
 cp /path/to/ralph/ralph-cc.sh scripts/ralph/
-cp /path/to/ralph/CLAUDE.md scripts/ralph/CLAUDE.md
+cp /path/to/ralph/CLAUDE.md scripts/ralph/
 
-chmod +x scripts/ralph/ralph.sh scripts/ralph/ralph-cc.sh
+# For OpenCode:
+cp /path/to/ralph/ralph-opencode.sh scripts/ralph/
+cp /path/to/ralph/AGENTS.md scripts/ralph/   # OpenCode reads AGENTS.md (falls back to CLAUDE.md)
+
+# For Codex:
+cp /path/to/ralph/ralph-codex.sh scripts/ralph/
+cp /path/to/ralph/AGENTS.md scripts/ralph/   # Codex reads AGENTS.md
+
+# For Amp:
+cp /path/to/ralph/ralph.sh scripts/ralph/
+cp /path/to/ralph/prompt.md scripts/ralph/
+
+chmod +x scripts/ralph/*.sh
 ```
 
 ### Option 2: Install skills globally (Amp)
@@ -132,11 +142,14 @@ This creates `prd.json` with user stories structured for autonomous execution.
 # Using Claude Code (recommended)
 ./scripts/ralph/ralph-cc.sh [max_iterations]
 
+# Using OpenCode
+./scripts/ralph/ralph-opencode.sh [max_iterations]
+
+# Using Codex
+./scripts/ralph/ralph-codex.sh [max_iterations]
+
 # Using Amp
 ./scripts/ralph/ralph.sh [max_iterations]
-
-# Using Claude Code (legacy, pipes CLAUDE.md as stdin)
-./scripts/ralph/ralph.sh --tool claude [max_iterations]
 ```
 
 Default is 10 iterations.
@@ -156,10 +169,13 @@ Ralph will:
 
 | File | Purpose |
 |------|---------|
-| `ralph-cc.sh` | Claude Code agent loop using `claude -p` with proper skill/project integration |
-| `ralph.sh` | Legacy bash loop that supports both Amp (`--tool amp`) and Claude Code (`--tool claude`) |
+| `ralph-cc.sh` | Claude Code agent loop (`claude -p --dangerously-skip-permissions`) |
+| `ralph-opencode.sh` | OpenCode agent loop (`opencode run --yolo`) |
+| `ralph-codex.sh` | Codex agent loop (`codex exec --full-auto`) |
+| `ralph.sh` | Legacy bash loop for Amp (`--tool amp`) and Claude Code (`--tool claude`) |
+| `CLAUDE.md` | Agent instructions for Claude Code |
+| `AGENTS.md` | Agent instructions for OpenCode and Codex (mirrors CLAUDE.md) |
 | `prompt.md` | Prompt template for Amp |
-| `CLAUDE.md` | Prompt template for Claude Code |
 | `prd.json` | User stories with `passes` and `inProgress` status (the task list) |
 | `prd.json.example` | Example PRD format for reference |
 | `progress.txt` | Append-only learnings for future iterations |
@@ -187,14 +203,14 @@ npm run dev
 
 ### Each Iteration = Fresh Context
 
-Each iteration spawns a **new AI instance** (Amp or Claude Code) with clean context. The only memory between iterations is:
+Each iteration spawns a **new AI instance** with clean context. The only memory between iterations is:
 - Git history (commits from previous iterations)
 - `progress.txt` (learnings and context)
 - `prd.json` (which stories are done)
 
 ### Parallel Execution
 
-Ralph automatically runs stories in **parallel** when they share the same `priority` number. Each story gets its own git worktree via `claude --worktree`, so their code changes never clobber each other.
+Ralph automatically runs stories in **parallel** when they share the same `priority` number. Each story gets its own git worktree, so their code changes never clobber each other.
 
 ```
 priority 1 — schema migration                    ← runs alone first
@@ -205,7 +221,7 @@ priority 3 — dashboard view (depends on A + B)   ← runs alone after
 
 After all worktrees in a wave finish, Ralph merges them back sequentially. If two stories edited the same file and a merge conflict occurs, the conflicting story is skipped and retried in the next iteration.
 
-The orchestrator (`ralph-cc.sh`) handles `prd.json` updates and `progress.txt` in parallel mode — agents only commit their code changes and output a `<story-done>US-XXX</story-done>` signal.
+The orchestrator (`ralph-cc.sh` / `ralph-opencode.sh` / `ralph-codex.sh`) handles `prd.json` updates and `progress.txt` in parallel mode — agents only commit their code changes and output a `<story-done>US-XXX</story-done>` signal.
 
 **Rule:** Only assign the same priority to stories that edit completely different files. Parallel stories that touch the same file will conflict on merge.
 
@@ -226,9 +242,9 @@ Too big (split these):
 
 ### AGENTS.md Updates Are Critical
 
-After each iteration, Ralph updates the relevant `AGENTS.md` files with learnings. This is key because AI coding tools automatically read these files, so future iterations (and future human developers) benefit from discovered patterns, gotchas, and conventions.
+After each iteration, Ralph updates the relevant instruction files (`CLAUDE.md` / `AGENTS.md`) with learnings. This is key because AI coding tools automatically read these files, so future iterations (and future human developers) benefit from discovered patterns, gotchas, and conventions.
 
-Examples of what to add to AGENTS.md:
+Examples of what to add:
 - Patterns discovered ("this codebase uses X for Y")
 - Gotchas ("do not forget to update Z when changing W")
 - Useful context ("the settings panel is in component X")
@@ -250,7 +266,7 @@ When all stories have `passes: true`, Ralph outputs `<promise>COMPLETE</promise>
 
 ## Debugging
 
-If a parallel run was interrupted, any leftover worktrees are cleaned up automatically the next time `ralph-cc.sh` starts.
+If a parallel run was interrupted, any leftover worktrees are cleaned up automatically the next time any runner script starts.
 
 Check current state:
 
@@ -267,7 +283,7 @@ git log --oneline -10
 
 ## Customizing the Prompt
 
-After copying `prompt.md` (for Amp) or `CLAUDE.md` (for Claude Code) to your project, customize it for your project:
+After copying the instruction file (`CLAUDE.md` for Claude Code, `AGENTS.md` for OpenCode/Codex, `prompt.md` for Amp) to your project, customize it:
 - Add project-specific quality check commands
 - Include codebase conventions
 - Add common gotchas for your stack
@@ -279,5 +295,7 @@ Ralph automatically archives previous runs when you start a new feature (differe
 ## References
 
 - [Geoffrey Huntley's Ralph article](https://ghuntley.com/ralph/)
-- [Amp documentation](https://ampcode.com/manual)
 - [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [OpenCode documentation](https://opencode.ai/docs)
+- [Codex CLI documentation](https://github.com/openai/codex)
+- [Amp documentation](https://ampcode.com/manual)
