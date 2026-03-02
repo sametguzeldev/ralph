@@ -1,7 +1,8 @@
 #!/bin/bash
 # Ralph Wiggum - Long-running AI agent loop (OpenCode edition)
 # Uses `opencode run` with --yolo for non-interactive autonomous execution.
-# OpenCode auto-reads CLAUDE.md as a fallback when no AGENTS.md is present.
+# Embeds AGENTS.md content directly in the prompt since auto-discovery only
+# works at the project root, not when ralph lives in a subdirectory.
 # Supports parallel execution: stories sharing the same priority run simultaneously
 # in separate git worktrees.
 # Usage: ./ralph-opencode.sh [max_iterations]
@@ -27,6 +28,7 @@ PRD_FILE="$SCRIPT_DIR/prd.json"
 PROGRESS_FILE="$SCRIPT_DIR/progress.txt"
 ARCHIVE_DIR="$SCRIPT_DIR/archive"
 LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
+SYSTEM_PROMPT="$(cat "$SCRIPT_DIR/AGENTS.md")"
 
 # ---------------------------------------------------------------------------
 # jq helpers
@@ -226,7 +228,9 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
     SEQ_OUT=$(mktemp)
     opencode run --yolo \
-      "Read CLAUDE.md and begin the next Ralph iteration" \
+      "${SYSTEM_PROMPT}
+
+Begin the next Ralph iteration." \
       2>&1 | tee "$SEQ_OUT" || true
     OUTPUT=$(cat "$SEQ_OUT")
     rm -f "$SEQ_OUT"
@@ -265,7 +269,9 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       WORKTREE_DIR="$GIT_ROOT/.claude/worktrees/$WORKTREE_NAME"
       OUT_FILE="/tmp/ralph-${STORY_ID}.out"
 
-      PROMPT="Parallel mode: implement story ${STORY_ID}: ${STORY_TITLE}.
+      PROMPT="${SYSTEM_PROMPT}
+
+Parallel mode: implement story ${STORY_ID}: ${STORY_TITLE}.
 Description: ${STORY_DESC}
 Acceptance criteria: ${STORY_AC}"
 
